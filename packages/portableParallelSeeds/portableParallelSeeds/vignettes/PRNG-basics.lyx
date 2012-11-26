@@ -352,6 +352,30 @@ status open
 
 \begin_layout Plain Layout
 
+<<echo=F, include=F>>=
+\end_layout
+
+\begin_layout Plain Layout
+
+RNGkind("Mersenne-Twister")
+\end_layout
+
+\begin_layout Plain Layout
+
+@
+\end_layout
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
 <<>>=
 \end_layout
 
