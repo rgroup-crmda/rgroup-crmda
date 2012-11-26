@@ -98,7 +98,7 @@ mvrnorm <-
 ##' correlation matrix. All values must be in [-1, 1], and the number
 ##' of values specified must be correct for a lower triangle.
 ##'
-##' Use this in combination with the \link{\code{covMat}} function to
+##' Use this in combination with the \code{covMat} function to
 ##' convert a vector of standard deviations and the correlation matrix
 ##' into a covariance matrix.
 ##'
