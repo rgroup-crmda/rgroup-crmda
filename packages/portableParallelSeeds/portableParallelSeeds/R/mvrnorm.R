@@ -37,7 +37,7 @@
 ##' @param EISPACK logical. Set to true to reproduce results from MASS
 ##'    versions prior to 3.1-21.
 ##' @import MASS
-##' @export mvrnorm
+##' @export
 ##' @return If \code{n = 1} a vector of the same length as \code{mu}, otherwise an
 ##'  \code{n} by \code{length(mu)} matrix with one sample in each row.
 ##' @author Ripley, B.D. with revision by Paul E. Johnson
@@ -66,6 +66,7 @@
 ##' Y2 <- mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
 ##' identical(Y0[1:5, ], Y1[1:5, ])
 ##' identical(Y1[1:5, ], Y2[1:5, ])
+##'
 mvrnorm <-
     function(n = 1, mu, Sigma, tol=1e-6, empirical = FALSE, EISPACK = FALSE)
 {
@@ -87,7 +88,7 @@ mvrnorm <-
     dimnames(X) <- list(nm, NULL)
     if(n == 1) drop(X) else t(X)
 }
-
+NULL
 
 
 ##' Convert the vech (column of strictly lower trianglar values from a matrix) into a correlation matrix.
@@ -102,15 +103,14 @@ mvrnorm <-
 ##' convert a vector of standard deviations and the correlation matrix
 ##' into a covariance matrix.
 ##'
+##' @export
 ##' @seealso Similar functions exist in many packages, see  \code{vec2sm} in corpcor, \code{xpnd} in MCMCpack
 ##' @param vech A vector of values to be placed into the strictly lower triangle of a matrix. All values must be in the [0,1] interval (because they are correlations).
 ##' @return A symmetric correlation matrix, with 1's on the diagonal.
 ##' Paul Johnson <pauljohn@@ku.edu>
-##'
 ##' @examples
 ##' v <- c(0.1, 0.4, -0.9)
 ##' vech2Corr(v)
-##'
 ##' v <- c(0.1, 0.4, -0.9, 0.4, 0.5, 0.1)
 ##' vech2Corr(v)
 ##'
@@ -126,47 +126,10 @@ vech2Corr <- function(vech){
     X
 }
 
+NULL
 
 
-
-
-##
-##
-##' Create correlation matrices.
-##'
-##' Use can supply either a single value (the common correlation among
-##' all variables), a column of the lower triangular values for a
-##' correlation matrix, or a candidate matrix. The function will check
-##' X and do the right thing. If X is a matrix, check that it
-## is a valid correlation matrix. If its a single value, use that
-## to fill up a matrix. If itis a vector, try to use it as a vech
-## to fill the lower triangle..
-##' @param X Required. May be one value, a vech, or a matrix
-##' @param d Optional. The number of rows in the correlation matrix to
-##' be created. lazyCor will deduce the desired size from X if
-##' possible. If X is a single value, d is a required argument.
-##' @return A correlation matrix.
-##' @author Paul Johnson <pauljohn@@ku.edu>
-##' @examples
-##' lazyCor(0.5, 8)
-##' lazyCor(c(0.1, 0.2, 0.3))
-##' lazyCor(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6))
-##' lazyCor(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.10))
-lazyCor <- function(X, d) {
-    if (is.matrix(X)){
-        stopifnot (isSymmetric(X))
-        if (!dim(X)[1] == d) stop("lazyCor: the dimension of the matrix supplied is inconsistent with the dimension argument d")
-    } else if (length(X) == 1) {
-        if ( X < -1 | X > 1 ) stop(paste("The value of of a correlation should be in [-1,1]"))
-        X <- matrix(X, nrow = d, ncol = d)
-        diag(X) <- 1.0
-    } else if (is.vector(X)){
-        X <- vech2Corr(X)
-    } else {
-        stop(paste("lazyCor cannot understand the value supplied for argument", deparse(substitute(X)),".\n That should be either a", d, " x ", d, "symmetric matrix, \n or a vech of the strictly lower triangular part of a matrix, or \n one single value, which we will use to fill up a matrix."))
-    }
-    X
-}
+NULL
 
 ##' Create covariance matrix from correlation and standard deviation information
 ##'
@@ -177,6 +140,7 @@ lazyCor <- function(X, d) {
 ##' @param d Optional. lazyCov will try to manufacture correlation and standard deviation matrices and vectors from minimal information, but the required dimension of the final matrix may be needed when the user supplies only a single value for both Rho and Sd.
 ##' @return covariance matrix suitable for input into mvrnorm.
 ##' @author <pauljohn@@ku.edu>
+##' @export
 ##' @examples
 ##' ##correlation 0.8 for all pairs, standard deviation 1.0 of each
 ##' lazyCov(Rho = 0.8, Sd = 1.0, d = 3)
@@ -208,4 +172,42 @@ lazyCov <- function(Rho, Sd, d){
 
 
 
+
+
+##' Create correlation matrices.
+##'
+##' Use can supply either a single value (the common correlation among
+##' all variables), a column of the lower triangular values for a
+##' correlation matrix, or a candidate matrix. The function will check
+##' X and do the right thing. If X is a matrix, check that it
+## is a valid correlation matrix. If its a single value, use that
+## to fill up a matrix. If itis a vector, try to use it as a vech
+## to fill the lower triangle..
+##' @param X Required. May be one value, a vech, or a matrix
+##' @param d Optional. The number of rows in the correlation matrix to
+##' be created. lazyCor will deduce the desired size from X if
+##' possible. If X is a single value, d is a required argument.
+##' @return A correlation matrix.
+##' @export
+##' @author Paul Johnson <pauljohn@@ku.edu>
+##' @examples
+##' lazyCor(0.5, 8)
+##' lazyCor(c(0.1, 0.2, 0.3))
+##' lazyCor(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6))
+##' lazyCor(c(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 0.10))
+lazyCor <- function(X, d) {
+    if (is.matrix(X)){
+        stopifnot (isSymmetric(X))
+        if (!dim(X)[1] == d) stop("lazyCor: the dimension of the matrix supplied is inconsistent with the dimension argument d")
+    } else if (length(X) == 1) {
+        if ( X < -1 | X > 1 ) stop(paste("The value of of a correlation should be in [-1,1]"))
+        X <- matrix(X, nrow = d, ncol = d)
+        diag(X) <- 1.0
+    } else if (is.vector(X)){
+        X <- vech2Corr(X)
+    } else {
+        stop(paste("lazyCor cannot understand the value supplied for argument", deparse(substitute(X)),".\n That should be either a", d, " x ", d, "symmetric matrix, \n or a vech of the strictly lower triangular part of a matrix, or \n one single value, which we will use to fill up a matrix."))
+    }
+    X
+}
 

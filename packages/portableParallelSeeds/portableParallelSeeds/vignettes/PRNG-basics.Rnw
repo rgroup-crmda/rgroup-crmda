@@ -1,0 +1,655 @@
+%% LyX 2.0.3 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english,noae]{article}
+\usepackage{lmodern}
+\renewcommand{\sfdefault}{lmss}
+\renewcommand{\ttdefault}{lmtt}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\geometry{verbose,tmargin=1in,bmargin=1in,lmargin=1in,rmargin=1in}
+\setlength{\parskip}{\smallskipamount}
+\setlength{\parindent}{0pt}
+\usepackage{babel}
+\usepackage{endnotes}
+\usepackage[authoryear]{natbib}
+\usepackage[unicode=true,pdfusetitle,
+ bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
+ breaklinks=false,pdfborder={0 0 1},backref=section,colorlinks=false]
+ {hyperref}
+\usepackage{breakurl}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Textclass specific LaTeX commands.
+\usepackage{Sweavel}
+<<echo=F>>=
+  if(exists(".orig.enc")) options(encoding = .orig.enc)
+@
+\usepackage{enumitem}		% customizable list environments
+\newlength{\lyxlabelwidth}      % auxiliary length 
+ \let\footnote=\endnote
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+%\VignetteIndexEntry{PRNG-basics}
+
+%%\usepackage[noae]{Sweavel}
+\usepackage{graphicx}
+\usepackage{color}
+
+\usepackage{babel}
+\usepackage[samesize]{cancel}
+
+
+
+\usepackage{ifthen}
+
+\makeatletter
+
+\renewenvironment{figure}[1][]{%
+
+ \ifthenelse{\equal{#1}{}}{%
+
+   \@float{figure}
+
+ }{%
+
+   \@float{figure}[#1]%
+
+ }%
+
+ \centering
+
+}{%
+
+ \end@float
+
+}
+
+\renewenvironment{table}[1][]{%
+
+ \ifthenelse{\equal{#1}{}}{%
+
+   \@float{table}
+
+ }{%
+
+   \@float{table}[#1]%
+
+ }%
+
+ \centering
+
+%  \setlength{\@tempdima}{\abovecaptionskip}%
+
+%  \setlength{\abovecaptionskip}{\belowcaptionskip}%
+
+% \setlength{\belowcaptionskip}{\@tempdima}%
+
+}{%
+
+ \end@float
+
+}
+
+
+%\usepackage{listings}
+% Make ordinary listings look as if they come from Sweave
+\lstset{tabsize=2, breaklines=true,style=Rstyle}
+
+\def\Rcode{\lstinline[basicstyle=\ttfamily,keywordstyle={}]}
+
+% In document Latex options:
+\fvset{listparameters={\setlength{\topsep}{0em}}}
+\def\Sweavesize{\scriptsize} 
+\def\Rcolor{\color{black}} 
+\def\Rbackground{\color[gray]{0.90}}
+
+\usepackage{babel}
+
+\usepackage[samesize]{cancel}
+
+\usepackage{ifthen}
+
+\usepackage{listings}% Make ordinary listings look as if they come from Sweave
+\lstset{tabsize=2, breaklines=true, style=Rstyle}
+
+\makeatother
+
+\begin{document}
+
+\title{Pseudo Random Generator Basics}
+
+
+\author{Paul E. Johnson <pauljohn @ ku.edu>}
+\maketitle
+\begin{abstract}
+While working on the R package portableParallelSeeds, I realized that
+there are a lot of little details about pseudo random generators that
+are not well understood. 
+\end{abstract}
+While working on this project, I've gained some insights about terminology
+and usage of random generators. A brief review may help readers follow
+along with the presentation. 
+
+
+\section{Terminology}
+
+A \textbf{pseudo random number generator }(PRNG) is an object that
+offers a stream of numbers. We treat those values as though they are
+random, even though the PRNG uses deterministic algorithms to generate
+them (that is why it is a ``pseudo'' random generator). From the
+perspective of the outside observer who is not privy to the details
+about the initialization of the PRNG, each value in the stream of
+numbers appears to be an equally likely selection among the possible
+values. %
+\footnote{Someone who observes thousands of values from the PRNG may be able
+to deduce its parameters and reproduce the stream. If we are concerned
+about that problem, we can add an additional layer of randomization
+that shuffles the output of the generator before revealing it to the
+user. %
+}
+
+Inside the PRNG, there is a vector of values, the \textbf{internal
+state} of the generator, which is updated as values are drawn. 
+
+The many competing PRNG designs generally have unique (and not interchangeable)
+internal state vectors. The differences in the structure of the internal
+state is one of the most striking facts that we gather while looking
+under the hood of the random generator code. It is common to refer
+to that internal state as the \textbf{seed} of the PRNG. It represents
+the current position from which the next value is to be drawn. 
+
+The values from the generator are used as input in procedures that
+simulate draws from \textbf{statistical distributions}, such as the
+uniform or normal distributions. The conversion from the generator's
+output into random draws from distributions is a large field of study,
+some distributions are very difficult to approximate. The uniform
+distribution is the only truly easy distribution. If the PRNG generates
+integer values, we simply divide each random integer by the largest
+possible value of the PRNG to obtain equally likely draws from the
+$[0,1]$ interval. It is only slightly more difficult to simulate
+draws from some distributions (e.g, the logistic), while for others
+(e.g., the gamma distribution) simulation are considerably more difficult.
+The normal distribution, which occupies such a central place in statistical
+theory, is an in-between case for which there are several competing
+proposals.
+
+
+\section{The Difference between the ``seed'' and the ``internal state''.}
+
+The term ``seed'' is often used incorrectly, or at least differently,
+by applied researchers. For them, a seed is an integer that starts
+up a generator in a given state. This misunderstanding flows from
+mis-statements in the documentation for commonly used software packages.
+For example, the SAS Language Reference states, ``Random-number functions
+and CALL routines generate streams of pseudo-random numbers from an
+initial starting point, called a seed, that either the user or the
+computer clock supplies'' \citeyearpar{SASLang}. It would be more
+correct to say the user supplies an ``intializing integer.'' From
+that initializing integer, the software does the work to create a
+unique initial internal state of the generator (a seed). To avoid
+re-creating more confusion, I will avoid the term seed wherever possible,
+instead referring to the internal state vector and the initializing
+integer.
+
+Most R users have encountered the set.seed() function. We run, for
+example, 
+
+<<>>=
+set.seed(12345)
+@
+
+The argument ``12345'' is not a ``seed''. It is an initializing
+integer, which is used by the set.seed function to re-set the generator's
+internal state to a known position. It is important to understand
+that the internal state of the random generator is not ``12345''.
+The generator's internal state, the vector of numbers that the generator
+uses over time, does not begin at a value ``12345''. Instead, the
+internal state is a much more elaborate thing. Consider just the first
+10 elements of the generator's internal state (the thing the experts
+call the seed) in R (by viewing the variable \Rcode|.Random.seed|):
+
+<<>>=
+s0 <- .Random.seed
+s0[1:10]
+@
+
+I'm only displaying the first 10 values (out of 626) of the initial
+state of the default random generator, which is the Mersenne-Twister
+(hereafter referred to as MT19937). The Mersenne-Twister was proposed
+by \citet{matsumoto_mersenne_1998} and, at the current time, it is
+considered the premier random generator for simulations conducted
+on workstations. It is now the default random generator in almost
+every program used for statistical research (including R, SAS, Matlab,
+Mplus, among others). 
+
+How can you check my claim that the default generator is MT19937?
+Run 
+
+<<>>=
+RNGkind()
+@
+
+The output includes two values, the first is the name of the existing
+random generator. The second value is the algorithm that is used to
+simulate values from a normal distribution.
+
+
+\subsection{MT19937's internal state}
+
+In order to understand the way R implements the various PRNGs, and
+thus the way portableParallelSeeds works, it is important to explore
+what happens to the internal state of the generator as we draw random
+numbers. Since we began with the default, MT19937, we might as well
+work on that first. Suppose we draw one value from a uniform distribution.
+
+<<>>=
+runif(1)
+@
+
+Take a quick look at the generator's internal state after that.
+
+<<>>=
+s1 <- .Random.seed
+s1[1:10]
+@
+
+The interesting part is in the first two values. 
+\begin{itemize}
+\item 403. This is a value that R uses to indicate which type of generator
+created this particular state vector. The value ``03'' indicates
+that MT19937 is in use, while the value ``4'' means that the inversion
+method is used to simulate draws from a normal distribution. The Mersenne-Twister
+is the default random generator in R (and most good programs, actually).
+\item 1. That's a counter. How many random values have been drawn from this
+particular vector? Only one. 
+\end{itemize}
+Each time we draw another uniform random value, the generator's counter
+variable will be incremented by one.
+
+<<>>=
+runif(1)
+s2 <- .Random.seed
+runif(1)
+s3 <- .Random.seed
+runif(1)
+s4 <- .Random.seed
+cbind(s1, s2, s3, s4)[1:8, ]
+@
+
+I'm only showing the first 8 elements, to save space, but there's
+nothing especially interesting about elements 9 through 626. They
+are all are integers, part of a complicated scheme that \citeauthor{matsumoto_mersenne_1998}
+created. The important point is that integers 3 through 626 are exactly
+the same in s1, s2, s3, and s4. They will stay the same until we draw
+620 more random numbers from the stream. 
+
+As soon as we draw more random numbers--enough to cause the 2nd variable
+to increment past 624--then the \emph{whole vector} changes. I'll
+draw 620 more values. The internal state s5 is ``on the brink''
+and one more random uniform value pushes it over the edge. The internal
+state s6 represents a wholesale update of the generator.
+
+<<>>=
+invisible(runif(620))
+s5 <- .Random.seed
+invisible(runif(1))
+s6 <- .Random.seed
+invisible(runif(1))
+s7 <- .Random.seed
+invisible(runif(1))
+s8 <- .Random.seed
+cbind(s1, s5, s6, s7, s8)[1:8, ]
+@
+
+After the wholesale change between s5 and s6, another draw produces
+more ``business as usual.'' Observe that the internal state of the
+generator in columns s6, s7 and s8 is not changing, except for the
+counter.
+
+Like all R generators, the MT19937 generator can be re-set to a previous
+saved state. There are two ways to do this. One way is the somewhat
+restrictive function \Rcode|set.seed()|. That translates an initializing
+integer into the 626 valued internal state vector of the generator
+(that's stored in \Rcode|.Random.seed|).
+
+<<reinit1>>=
+set.seed(12345)
+runif(1)
+s9 <- .Random.seed
+@
+
+We can achieve the same effect by using the assign function to replace
+the current value of .Random.seed with a copy of a previously saved
+state, s0. I'll draw one uniform value and then inspect the internal
+state of the generator (compare s1, s9, and s10).
+
+<<reinit2>>=
+assign(".Random.seed", s0, envir=.GlobalEnv)
+runif(1)
+s10 <- .Random.seed
+cbind(s1, s9, s10)[1:8, ]
+@
+
+The reader should notice that after re-initializing the state of the
+random generator, we draw the exact same value from \Rcode|runif(1)|
+and after that the state of the generator is the same in all of the
+cases being compared (s9 is the same as s10). 
+
+The MT19937 is a great generator with a very long repeat cycle. The
+cycle of values it provides will not begin to repeat itself until
+it generates $2^{19937}$ values. It performs very well in a series
+of tests of random number streams. 
+
+The only major shortcoming of MT19937 is that it does not work well
+in parallel programming. MT19937 can readily provide random numbers
+for 1000s of runs of a simulation on a single workstation, but it
+is very difficult to initialize MT19937 on many compute nodes in a
+cluster so that the random streams are not overlapping. One idea is
+to spawn separate MT19937 generators with slightly different internal
+parameters so that the streams they generate will differ (\citealp{mascagni_sprng:_2000};
+see also \citealp{Matsumoto2000}). For a variety of reasons, work
+on parallel computing with an emphasis on replication has tended to
+use a different PRNG, which is described next. 
+
+
+\subsection{CMRG, an alternative generator.}
+
+In parallel computing with R, the most widely used random generator
+is Pierre L'Ecuyer's combined multiple-recursive generator, or CMRG
+\citet{lecuyer_good_1999}.
+
+R offers a number of pseudo random generators, but only one random
+generator can be active at a given moment. That restriction applies
+because the variable .Random.seed is used as the central co-ordinating
+piece of information. When the user asks for a uniform random number,
+the R internal system scans the .Random.seed to find out which PRNG
+algorithm should be used and then the value of .Random.seed is referred
+to the proper generator. 
+
+We ask R to use that generator by this command:
+
+<<crmg1, include=T, eval=F>>=
+RNGkind("L'Ecuyer-CMRG")
+@
+
+That puts the value of .Random.seed to a proper condition in the global
+environment. Any R function that depends on random numbers--to simulate
+random distributions or to initialize estimators--it will now draw
+from the CMRG using .Random.seed as its internal state. 
+
+Parallel computing in a cluster of separate systems pre-supposes the
+ability to draw separate, uncorrelated, non-overlapping random numbers
+on each system. In order to do that, we follow an approach that can
+be referred to as the ``many separate substreams'' approach. The
+theory for this approach is elegant. Think of a really long vector
+of randomly generated integers. This vector is so long it is, well,
+practically infinite. It has more numbers than we would need for thousands
+of separate projects. If we divide this practically infinite vector
+into smaller pieces, then each piece can be treated as its own random
+number stream. Because these separate vectors are drawn from the one
+really long vector of random numbers, then we have confidence that
+the separate substreams are not overlapping each other and are not
+correlated with each other. But we don't want to run a generator for
+a really long time so that we can find the subsections of the stream.
+That would require an impractically huge amount of storage. So, to
+implement the very simple, solid theory, we just need a practical
+way to splice into a random vector, to find the initial states of
+each separate substream.
+
+That sounds impossible, but a famous paper by \citep{lecuyer_object-oriented_2002}
+showed that it can be done. \citeauthor{lecuyer_object-oriented_2002}
+demonstraed an algorithm that can ``skip'' to widely separated points
+in the long sequence of random draws. Most importantly, this is done
+\emph{without actually generating the practically infinite series
+of values}. In R version 2.14, the L'Ecuyer CMRG was included as one
+of the available generators, and thus it became possible to implement
+this approach. We can find the generator's internal state at far-apart
+positions. 
+
+Lets explore L'Ecuyer's CMRG generator, just as we explored MT19937.
+First, we tell R to change its default generator, and then we set
+the initial state and draw four values. We collect the internal state
+(.Random.seed) of the generator after each random uniform value is
+generated.
+
+<<cmrg4>>=
+RNGkind("L'Ecuyer-CMRG")
+set.seed(12345)
+t0 <- .Random.seed
+runif(1)
+t1 <- .Random.seed
+runif(1)
+t2 <- .Random.seed
+runif(1)
+t3 <- .Random.seed
+rnorm(1)
+t4 <- .Random.seed
+cbind(t1, t2, t3, t4)
+@
+
+Apparently, this generator's assigned number inside the R framework
+is ``07'' (the ``4'' still indicates that inversion is being used
+to simulate normal values). There are 6 integer numbers that characterize
+the state of the random generator. The state vector is thought of
+as 2 vectors of 3 elements each. Note that the state of the CMRG process
+does not include a counter variable comparable to the 2nd element
+in the MT19937's internal state. Each successive draw shifts the values
+in those vectors. 
+
+The procedure to skip ahead to the starting point of the next substream
+is implemented in the R function nextRNGStream, which is provided
+in R's parallel package. The state vectors, which can be used to re-initialize
+5 separate random streams, are shown below.
+
+<<>>=
+require(parallel) ## for nextRNGStream
+substreams <- vector("list", 5)
+substreams[[1]] <- t0
+substreams[[2]] <- nextRNGStream(t0)
+substreams[[3]] <- nextRNGStream(substreams[[2]])
+substreams[[4]] <- nextRNGStream(substreams[[3]])
+substreams[[5]] <- nextRNGStream(substreams[[4]])
+substreams
+@
+
+
+\section{Replication Challenges}
+
+
+\subsection{rnorm draws two random values, but runif draws only one. rgamma is
+less predictable!}
+
+One important tidbit to remember is that simulating draws from some
+distributions will draw more than one number from the random generator.
+This disturbs the stream of values coming from the random generator,
+which causes simulation results to diverge. 
+
+Here is a small example in which this problem might arise. We draw
+3 collections of random numbers. 
+
+<<>>=
+set.seed(12345)
+x1 <- runif(10)
+x2 <- rpois(10, lambda=7)
+x3 <- runif(10)
+@
+
+Now suppose we decide to change the variable x2 to draw from a normal
+distribution. 
+
+<<>>=
+set.seed(12345)
+y1 <- runif(10)
+y2 <- rnorm(10)
+y3 <- runif(10)
+identical(x1,y1)
+identical(x2,y2)
+identical(x3, y3)
+rbind(x3, y3)
+@
+
+In these two cases, we draw 30 random numbers. I expect that x1 and
+y1 will be identical, and they are. I know x2 and y2 will differ.
+But I expected, falsely, that x3 and y3 would be the same. But they
+are not. Their values are not even remotely similar. If we then go
+to to make calculations and compare these two models, then our conclusions
+about the effect of changing the second variable from poisson to normal
+would almost certainly be incorrect, since we have accidentally caused
+a wholesale change in y3 as well.
+
+Why does this particular problem arise? The function rnorm() draws
+two values from the random generator, thus causing all of the uniform
+values in y3 to differ from x3. This is easiest to see with MT19937,
+since that generator offers us the counter variable in element 2.
+I will re-initialize the stream, and then draw some values. 
+
+<<norm1>>=
+RNGkind("Mersenne-Twister")
+set.seed(12345)
+runif(1); s1 <- .Random.seed
+runif(1); s2 <- .Random.seed
+runif(1); s3 <- .Random.seed
+rnorm(1); s4 <- .Random.seed
+cbind(s1, s2, s3, s4)[1:8, ]
+@\\
+Note that the counter jumps by two between s3 and s4.
+
+The internal counter in MT19937 makes the ``normal draws two'' problem
+easy to spot. With CMRG, this problem is more difficult to diagnose.
+Since we know what to look for, however, we can replicate the problem
+with CMRG. We force the generator back to the initial state and then
+draw five uniform random variables.
+
+<<echo=T, include=F>>=
+assign(".Random.seed", t1, envir=.GlobalEnv)
+u1 <- .Random.seed
+invisible(runif(1))
+u2 <- .Random.seed
+invisible(runif(1))
+u3 <- .Random.seed
+invisible(runif(1))
+u4 <- .Random.seed
+invisible(runif(1))
+u5 <- .Random.seed
+cbind(u1, u2, u3, u4, u5)
+@
+
+The internal states are displayed. Note the state of the generator
+u5 is the same as t4 in the previous section, meaning that drawing
+5 uniform random variables puts the CMRG into the same state that
+CMRG reaches when we draw 3 uniform values and 1 normal variable. 
+
+The situation becomes more confusing when random variables are generated
+by an accept/reject algorithm. If we draw several values from a gamma
+distributions, we note that MT19937's counter may change by 2, 3,
+or more steps.
+
+<<>>=
+RNGkind("Mersenne-Twister")
+set.seed(12345)
+invisible(rgamma(1, shape = 1)); v1 <- .Random.seed[1:4]
+invisible(rgamma(1, shape = 1)); v2 <- .Random.seed[1:4]
+invisible(rgamma(1, shape = 1)); v3 <- .Random.seed[1:4]
+invisible(rgamma(1, shape = 1)); v4 <- .Random.seed[1:4]
+invisible(rgamma(1, shape = 1)); v5 <- .Random.seed[1:4]
+invisible(rgamma(1, shape = 1)); v6 <- .Random.seed[1:4]
+cbind(v1, v2, v3, v4, v5, v6)
+@
+
+Most of the time, drawing a single gamma value uses just 2 or 3 numbers
+from the generator, but about 10 percent of the time more draws will
+be taken from the generator. %
+\footnote{A routine generates 10,000 gamma values while tracking the number
+of values drawn from the random generator for each is included with
+portableParallelSeeds in the examples folder (gamma\_draws.R). %
+}
+
+The main point in this section is that apparently harmless changes
+in the design of a program may disturb the random number stream, thus
+making it impossible to replicate the calculations that follow the
+disturbance. Anticipating this problem, it can be essential to have
+access to several separate streams within a given run in order to
+protect against accidents like this.
+
+Many other functions in R may draw random values from the stream,
+thus throwing off the sequence that we might be depending on for replication.
+Many sorting algorithms draw random numbers, thus altering the stream
+for successive random number generation. While debugging a program,
+one might unwittlingly insert functions that exacerbate the problem
+of replicating draws from random distributions. If one is to be extra-careful
+on the replication of random number streams, it seems wise to keep
+a spare stream for every project and then switch the generator to
+use that spare stream, and then change back to the other streams when
+number that need to be replicated are drawn. 
+
+
+\subsection{Be cautious about mvrnorm.}
+
+The MASS package function mvrnorm() is very widely used to generate
+multivariate normal data. It creates one row of data for each sample
+requested. 
+
+I recently noticed a quirk while trying to replicate some results.
+Suppose we draw 10 rows, with 3 columns like so.
+
+<<>>=
+require(MASS)
+RNGkind("L'Ecuyer-CMRG")
+set.seed(12345)
+X0 <- MASS::mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
+X0
+@
+
+I had expected, wrongly as it turned out, that if we reduced the size
+of the requested sample, we would receive the first 5 rows of X0.
+
+<<>>=
+set.seed(12345)
+X1 <- MASS::mvrnorm(n=5, mu = c(0,0,0), Sigma = diag(3))
+X1
+@
+
+And I had hoped, in vain, that if I drew a larger sample, that the
+first 10 observations would match matrix X0.
+
+<<>>=
+set.seed(12345)
+X2 <- MASS::mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
+X2
+@
+
+This is an unsatisfactory situation, of course. The first observations
+in the third column are the same in all three sets, while the rest
+differ. In a simulation exercise, this would have odd effects on our
+understanding of the effects of re-sampling and changes in sample
+size.
+
+Only a small change in the mvrnorm code is required to solve this
+problem. Packaged with parallelPortableSeeds one finds a new version
+of mvrnorm that has better results, at least in terms of replication:
+
+<<>>=
+set.seed(12345)
+Y0 <- portableParallelSeeds::mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
+Y0
+set.seed(12345)
+Y1 <- portableParallelSeeds::mvrnorm(n=5, mu = c(0,0,0), Sigma = diag(3))
+Y1
+set.seed(12345)
+Y2 <- portableParallelSeeds::mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
+Y2
+set.seed(12345)
+Y4 <- portableParallelSeeds::mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
+Y4
+set.seed(12345)
+Y5 <- portableParallelSeeds::mvrnorm(n=100, mu = c(0,0,0), Sigma = diag(3))
+Y5
+@
+
+\theendnotes{}
+
+\bibliographystyle{apsr}
+\bibliography{pps}
+
+\end{document}

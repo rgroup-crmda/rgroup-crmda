@@ -20,6 +20,11 @@ lyx -e pdf2 pps.lyx
 lyx -e sweave pps.lyx
 cp -f pps.pdf ../../${PACKAGE}/vignettes
 
+lyx -e pdf2 PRNG-basics.lyx
+lyx -e sweave PRNG-basics.lyx
+cp -f PRNG-basics ../../${PACKAGE}/vignettes
+
+
 cd ../..
 
 R --vanilla <<EOR
