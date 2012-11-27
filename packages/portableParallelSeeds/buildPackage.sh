@@ -61,3 +61,5 @@ read -p "Erase Rcheck temporary: OK? (y or n)" result
 if [ $result = "y" ]; then
 rm -rf ${PACKAGE}.Rcheck
 fi
+
+echo "Consider scp ${PACKAGE}_${VERSION}.tar.gz hpc.quant.ku.edu:/tools/kran/src/contrib"

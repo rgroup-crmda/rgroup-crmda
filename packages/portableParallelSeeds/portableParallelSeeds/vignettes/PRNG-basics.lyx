@@ -414,7 +414,11 @@ seed
 .
  It is an initializing integer, which is used by the set.seed function to
  re-set the generator's internal state to a known position.
- It is important to understand that the internal state of the random generator
+ 
+\end_layout
+
+\begin_layout Standard
+It is important to understand that the internal state of the random generator
  is not 
 \begin_inset Quotes eld
 \end_inset
@@ -424,8 +428,8 @@ seed
 \end_inset
 
 .
- The generator's internal state, the vector of numbers that the generator
- uses over time, does not begin at a value 
+ The generator's internal state, is actually a more complicated structure.
+ The integer value 
 \begin_inset Quotes eld
 \end_inset
 
@@ -433,9 +437,22 @@ seed
 \begin_inset Quotes erd
 \end_inset
 
+ is important only because it is used by the set.seed() function to construct
+ that more complicated internal initial state.
+ 
+\end_layout
+
+\begin_layout Standard
+There are several random generators supplied with R.
+ The default is the Mersenne-Twister, commonly known as MT19937 
+\begin_inset CommandInset citation
+LatexCommand citet
+key "matsumoto1998"
+
+\end_inset
+
 .
- Instead, the internal state is a much more elaborate thing.
- Consider just the first 10 elements of the generator's internal state (the
+ Consider just the first 12 elements of the generator's internal state (the
  thing the experts call the seed) in R (by viewing the variable 
 \begin_inset ERT
 status open
@@ -468,7 +485,7 @@ s0 <- .Random.seed
 
 \begin_layout Plain Layout
 
-s0[1:10]
+s0[1:12]
 \end_layout
 
 \begin_layout Plain Layout
@@ -482,9 +499,8 @@ s0[1:10]
 \end_layout
 
 \begin_layout Standard
-I'm only displaying the first 10 values (out of 626) of the initial state
- of the default random generator, which is the Mersenne-Twister (hereafter
- referred to as MT19937).
+I'm only displaying the first few values (out of 626) of the initial state
+ of the the Mersenne-Twister.
  The Mersenne-Twister was proposed by 
 \begin_inset CommandInset citation
 LatexCommand citet
@@ -492,15 +508,16 @@ key "matsumoto_mersenne_1998"
 
 \end_inset
 
- and, at the current time, it is considered the premier random generator
- for simulations conducted on workstations.
- It is now the default random generator in almost every program used for
- statistical research (including R, SAS, Matlab, Mplus, among others).
+ and, at the current time, it is considered a premier random generator for
+ simulations conducted on workstations.
+ It is now the default random generator in almost every statistical program
+ (including R, SAS, Matlab, Mplus, among others).
  
 \end_layout
 
 \begin_layout Standard
-How can you check my claim that the default generator is MT19937? Run 
+The generator that is currently selected for use in R can be revealed by
+ this command,
 \end_layout
 
 \begin_layout Standard
@@ -542,7 +559,11 @@ MT19937's internal state
 In order to understand the way R implements the various PRNGs, and thus
  the way portableParallelSeeds works, it is important to explore what happens
  to the internal state of the generator as we draw random numbers.
- Since we began with the default, MT19937, we might as well work on that
+ 
+\end_layout
+
+\begin_layout Standard
+Since we began with the default, MT19937, we might as well work on that
  first.
  Suppose we draw one value from a uniform distribution.
 \end_layout
@@ -1768,6 +1789,11 @@ set.seed(12345)
 
 \begin_layout Plain Layout
 
+.Random.seed
+\end_layout
+
+\begin_layout Plain Layout
+
 X0 <- MASS::mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
 \end_layout
 
@@ -1807,6 +1833,11 @@ set.seed(12345)
 
 \begin_layout Plain Layout
 
+.Random.seed
+\end_layout
+
+\begin_layout Plain Layout
+
 X1 <- MASS::mvrnorm(n=5, mu = c(0,0,0), Sigma = diag(3))
 \end_layout
 
@@ -1842,6 +1873,11 @@ status open
 \begin_layout Plain Layout
 
 set.seed(12345)
+\end_layout
+
+\begin_layout Plain Layout
+
+.Random.seed
 \end_layout
 
 \begin_layout Plain Layout
@@ -1889,6 +1925,11 @@ status open
 
 \begin_layout Plain Layout
 
+library(portableParallelSeeds)
+\end_layout
+
+\begin_layout Plain Layout
+
 set.seed(12345)
 \end_layout
 
@@ -1924,42 +1965,22 @@ set.seed(12345)
 
 \begin_layout Plain Layout
 
+.Random.seed
+\end_layout
+
+\begin_layout Plain Layout
+
+rnorm(1)
+\end_layout
+
+\begin_layout Plain Layout
+
 Y2 <- portableParallelSeeds::mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
 \end_layout
 
 \begin_layout Plain Layout
 
 Y2
-\end_layout
-
-\begin_layout Plain Layout
-
-set.seed(12345)
-\end_layout
-
-\begin_layout Plain Layout
-
-Y4 <- portableParallelSeeds::mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
-\end_layout
-
-\begin_layout Plain Layout
-
-Y4
-\end_layout
-
-\begin_layout Plain Layout
-
-set.seed(12345)
-\end_layout
-
-\begin_layout Plain Layout
-
-Y5 <- portableParallelSeeds::mvrnorm(n=100, mu = c(0,0,0), Sigma = diag(3))
-\end_layout
-
-\begin_layout Plain Layout
-
-Y5
 \end_layout
 
 \begin_layout Plain Layout
