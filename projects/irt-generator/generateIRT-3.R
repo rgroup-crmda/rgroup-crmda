@@ -1,8 +1,14 @@
-## Paul E. Johnson
-## 2012-11-15
-
-## Draw random scores from a multidimensional abilities
-## dichotomous outcomes.
+## Title: generateIRT-3.R
+## Author: Paul E. Johnson <pauljohn@ku.edu>
+## Date posted: 2012-11-28
+## Depends: None
+## Description: Adapts ideas in generateIRT-1.R and
+## generateIRT-2.R to a multidimensional model of individual ability.
+## This one is actually fancier than that, it is a very structured
+## version of the MIRT, a "bi-factor" model.
+##
+## The output is dichotomous, 0/1 data.
+##  -------------------------------------------------------------------
 
 
 ##x is theta matrix. beta is vector of disc. parameters.
@@ -30,7 +36,7 @@ genDat <- function(npb = 15, thetas){
 
     alpha <- runif(M, -2, 1)
 
-## Stupid way:
+## Stupid way, do each question in a for loop:
 
     probMat <- matrix(NA, N, M)
 

@@ -1,50 +1,56 @@
-## Paul E. Johnson
-## 2012-11-15
-
-## Draw random scores from a graded response model.
+## Title: generateIRT-2.R
+## Author: Paul E. Johnson <pauljohn@ku.edu>
+## Date posted: 2012-11-28
+## Depends: None
+## Description: Adapts ideas in generateIRT-1.R to generate 0/1/2/3/4
+##  answer data, for a "graded response" model.  Now we have to change
+## the parameterization of the data generating model.  This is a frequent
+##  source of confusion among researchers, because the "a" and the "b" parameters have different meanings.  VERY frustrating to a consultant whose clients just want to talk about a and b without realizing that they mean different things.  There's some blither below about it.
+##
+## This is a one-dimensional "theta" (individual ability).  The adaptation to
+##  the ordinal output is the only fancy footwork required.  We still
+## generate individual ability values, and then for each question we
+## calculate values for individual performance. Then we divide that data
+## into categories.
+##  -------------------------------------------------------------------
 
 ## Some new formulae based on my reading of the "ltm" package for
 ## R and this article:
-## Carlos G. FOrero and Alberto Maydeu-Olivares. 2009.
+## Carlos G. Forero and Alberto Maydeu-Olivares. 2009.
 ## Estimation of IRT Graded Response Models: Limited Versus Full
 ## Information Methods. Psychological Methods 14(3): 275-299.
 
-## this is the "standard" IRT formulation for the probability
-## of a correct response. x is "ability", a is discrimination,
-## b is difficulty. Right?
+## The "standard" traditional IRT formulation for the probability of a
+## correct response is this: (x is "ability", a is discrimination, b
+## is difficulty.)
 
-probLogit <- function(a, b, x){
-    exp(a * (x - b))/(1 + exp(a * (x - b)))
-}
+## probLogit <- function(a, b, x){
+##     exp(a * (x - b))/(1 + exp(a * (x - b)))
+##}
 
 ## Various sources (Forero and Maydeu-Olivares, for example) claim
-## that this equivalent version is more workable, it is is easier to
-## extend to MIRT.
+## that it is better to reformulate, this allows several generalizations
+## (including multiple dimensions of individual ability).
 
 ## For one question, with ability x, the chance of a correct
-## answer depends on alpha and beta.
+## answer depends on alpha and beta. This returns a value in
+## (0,1)
 probLogit <- function(alpha, beta, x){
     exp(alpha + beta * x)/(1 + exp(alpha + beta * x))
 }
 
-## CAUTION: signs are changing in unexpected ways here, and
-## the labels are changing in confusing ways.
-## alpha = -a*b
-## beta = a
-## Hence the confusing problem that the colloquial a and b
-## coefficients seem to swap meanings...
-## I know of one dissertation that was blown up by the
-## jumbled a's and b's in 2 different programs.
+## CAUTION: a and b have a different meaning than in the traditional IRT.
+## To reduce confusion between generateIRT-1.R and this example,
+## I'm calling the intercept parameter alpha and the slope beta.
 
 ## With a multi-category question, we say there are several
 ## values of alpha for each question. Think of the alphas as
 ## thresholds.
 
-## Its easy, then, to see what we need to do. In
-## generateIRT-1.R, I used the cumulative probability estimates
-## to generate one matrix of answers for N respondents.
-## Now I need to generate to generate a cumulative probability matrix
-## for each different the threshold parameter
+## In generateIRT-1.R, I used the cumulative probability estimates to
+## generate one matrix of answers for N respondents.  Now I need to
+## generate to generate a cumulative probability matrix for each
+## different the threshold parameter
 
 ## We have slopes, one for each question:
 ##  5 questions
@@ -52,6 +58,7 @@ betas <- c( 0.7, 0.5, 0.5, 0.3, 0.1)
 
 ## For each question, there are thresholds. Suppose
 ## our items can be assigned 4 grades. That means 3 thresholds.
+##
 ## threshold 1, for 5 questions
 alphas1 <- c( 0.1, 0.2, 0.7, 0.5, 1.3)
 ## threshold 2, for 5 questions
@@ -67,8 +74,9 @@ N <- 10
 thetas <- rnorm(N)
 
 ## For each person, each question, there are 3 intercepts,
-## and we want the cumulative probability of each one.
+## and for each one we need to create a probability matrix.
 
+## Initialize that:
 cumArray <- array(0, dim = c(3, N, ncol(as)))
 
 ## I see a way to compress this calculation, but for
@@ -99,6 +107,7 @@ cumArray[ , 3, 1]
 ##Suppose that gives
 ## [1] 0.6036291 0.6727412 0.7350913
 
+## The inversion method draws a random uniform u, and proceeds:
 ## If u < 0.6036291, the outcome is level 1
 ## If 0.6036291 < u < 0.6727412, outcome is 2.
 ## If 0.6727412 < u < 0.7350913, outcome is 3.
@@ -134,24 +143,7 @@ for(x in 1:N)
  }
 result
 
-
-
-## Suppose we want correlated answers. What would that mean?
-## Would it mean homogenizing the beta coefficients for
-## some questions?
-## The theta value itself creates some correlation. High
-## theta means better answers to all questions. Right?
-## But now we want more. questions 2 and 4 to be correlated.
-## Perhaps they are affected  by the same exogenous shock.
-
-That's where I'm stumped for a logically consistent approach.
-
-Would correlation between answers to questions 2 and 4 mean that there
-is a single random effect added to both of those variables? Think of
-it like a clustered random effect, kinda. Sorta.
-
-Does a correlation imply we "boost" both outputs, similar to
-simply adding something to the slope coefficient?
-
-
+## As in generateIRT-1.R, I conclude by saying I believe
+## this generated some data, but now I need somebody to
+## run it through some fitter function.
 
