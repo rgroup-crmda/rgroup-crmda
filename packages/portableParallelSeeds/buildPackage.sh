@@ -22,7 +22,7 @@ cp -f pps.pdf ../../${PACKAGE}/vignettes
 
 lyx -e pdf2 PRNG-basics.lyx
 lyx -e sweave PRNG-basics.lyx
-cp -f PRNG-basics ../../${PACKAGE}/vignettes
+cp -f PRNG-basics.pdf ../../${PACKAGE}/vignettes
 
 
 cd ../..
