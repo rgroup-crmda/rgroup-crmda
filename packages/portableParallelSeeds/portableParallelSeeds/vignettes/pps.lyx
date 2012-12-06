@@ -164,7 +164,7 @@ foottoend
 \begin_body
 
 \begin_layout Title
-Portable Parallel Seeds
+Portable Parallel Streams
 \end_layout
 
 \begin_layout Author
@@ -192,7 +192,7 @@ many separate substreams
 \begin_inset Quotes erd
 \end_inset
 
- made possible by the CMRG random generator (as suggested by 
+ made possible by the CMRG random generator (as proposed by 
 \begin_inset CommandInset citation
 LatexCommand citealp
 key "lecuyer_object-oriented_2002"
@@ -216,9 +216,8 @@ ly) or on a cluster computer (parallel) and obtain the same results.
 The portableParallelSeeds package for R proposes a simple, yet powerful,
  method for replicating simulations in a way that is valid across hardware
  types and operating systems.
- It is intended to facilitate the work of researchers who need to run a
- series of simulations, either on a desktop workstation or in a cluster
- of many separate computers.
+ It facilitates the work of researchers who need to run a series of simulations,
+ either on a desktop workstation or in a cluster of many separate computers.
  The approach proposed here allows the precise replication of the whole
  batch of runs, whether run in serial or parallel, but it has two special
  features that are not easily available elsewhere.
@@ -231,7 +230,7 @@ The portableParallelSeeds package for R proposes a simple, yet powerful,
  stream, and then turn back to the first stream to draw data for 50 more
  students from the same generator that generated the first batch of students.
  Thus, data for the same 1050 students would be obtained, whether they are
- drawn in two sets (1000+50) or in one set (1050).
+ drawn in two phases or in one continuous series of random draws.
 \end_layout
 
 \begin_layout Standard
@@ -249,16 +248,14 @@ key "chambers_soda:_2012"
 
 \end_inset
 
-) with ideas from the R package snowFT package by Hana Sevcikova and Tony
- R.
- Rossini 
+) with ideas from the R package snowFT (Sevcikova and Rossini 
 \begin_inset CommandInset citation
-LatexCommand citeyearpar
+LatexCommand citeyear
 key "snowFT"
 
 \end_inset
 
-.
+).
  Chambers proposes a method of recording the random generator's state that
  works well in simulations that run on a single piece of hardware, but it
  does not generalize directly to a cluster computing framework in which
@@ -273,14 +270,43 @@ Introduction
 \end_layout
 
 \begin_layout Standard
-In statistical research, it is now common propose an estimator and then
+In statistical research, it is now common to propose an estimator and then
  apply it to 1000s of simulated data sets in order to ascertain the sampling
  distribution (for a review, see Johnson, Forthcoming).
- Researchers face a variety of practical challenges in the management of
- these simulations so that the sources of variations in results across runs
- can be meaningfully understood.
- The ability to replicate runs within this research process is, quite obviously,
- of the first importance (Chambers, 2008).
+ One of the practical problems is to manage the insertion of randomness
+ into the analysis.
+ 
+\end_layout
+
+\begin_layout Standard
+Researchers face a variety of practical challenges in the management of
+ these simulations.
+ It is vital that each simulation exercise be replicatable, even in its
+ very fine-grained details 
+\begin_inset CommandInset citation
+LatexCommand citep
+key "chambers_software_2008"
+
+\end_inset
+
+.
+ That is to say, in order to feel confident in the results of a simulation
+ exercise, we need to be able to re-generate its runs exactly, not just
+ on average.
+ Suppose we conduct 2000 repetitions (runs) in a batch of simulations.
+ We should be able to repeat the whole batch, exactly, and we should also
+ be able to repeat individual part of the exercise.
+ The simulated random values drawn for the 1324rd line of a data structure
+ should be the same whether we re-start a project on a cluster computer
+ or in a desktop workstation.
+ If one accidentally collects the same random numbers for two variables
+ that are expected to differ, one may mistakenly conclude that there is
+ no difference to be found.
+ On the other hand, if one accidentally draws numbers that differ, when
+ the logic indicates that they ought to be exactly the same, then one will
+ mistakenly conclude that something important has changed.
+ The tools offered in portableParallelSeeds will help Monte Carlo studies
+ avoid some of those dangers.
  
 \end_layout
 
@@ -308,13 +334,22 @@ runs.
 run
 \series default
  is an isolated series of calculations that begins in a pre-determined state.
- Think of the collection of initializing states as a matrix that has one
- row for each anticipated run of the model.
+ 
+\end_layout
+
+\begin_layout Standard
+At the outset of the exercise, we will create a warehouse of initializers
+ for random streams.
+ They can be stored in a file and transported among systems so that the
+ simulation can be re-started.
+ 
+\end_layout
+
+\begin_layout Standard
+It may be helpful to think of the collection of initializing states as a
+ matrix that has one row for each anticipated run of the model.
  Within each row of this matrix, there will be information to initialize
  one or more separate streams of random numbers.
- The matrix of initializing states can be saved on disk.
- In that way, any particular run from a batch can be re-started on a different
- computer and the same results can be obtained.
  A sketch of this initializing matrix is offered in Table 
 \begin_inset CommandInset ref
 LatexCommand ref
@@ -393,7 +428,7 @@ stream 3
 \begin_inset Text
 
 \begin_layout Plain Layout
-1, 1
+1,1
 \end_layout
 
 \end_inset
@@ -628,7 +663,7 @@ Step 2.
  Design the simulation so that, when a run begins, the function that governs
  the run will retrieve its initializing states.
  Those states are then set into the R global environment.
- The portableParallelSeeds package provides function, 
+ The function 
 \begin_inset ERT
 status open
 
@@ -636,19 +671,173 @@ status open
 
 
 \backslash
-Rcode|useStream|
+Rcode|initPortableStreams()|
 \end_layout
 
 \end_inset
 
-, to select among the random number streams.
+ will receive the entire collection of seeds and it will select the one
+ that is needed for a particular run.
+ That interface is more convenient in some simulation designs.
+ It is also possible for the programmer to take a set of initializers from
+ the seed warehouse and then use it to initialize a set of generators with
+ the function called 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|setSeedCollection()|
+\end_layout
+
+\end_inset
+
+.
+ 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|initPortableStreams()|
+\end_layout
+
+\end_inset
+
+ and 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|setSeedCollection|
+\end_layout
+
+\end_inset
+
+ will place several structures into the R global environment.
+\end_layout
+
+\begin_layout Standard
+The design of functions that use random numbers in R is a little bit tricky
+ because all generators use to a state variable called 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|.Random.seed|
+\end_layout
+
+\end_inset
+
+ that is stored in the global environment of the R session.
+ As mentioned in Gentleman, 
+\begin_inset Quotes eld
+\end_inset
+
+The decision to have these [random generator] functions manipulate a global
+ variable, 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|.Random.seed|
+\end_layout
+
+\end_inset
+
+, is slightly unfortunate as it makes it somewhat more difficult to manage
+ several different random number streams simultaneously
+\begin_inset Quotes erd
+\end_inset
+
+ (Gentleman, 2009, p.
+ 201).
+ That can be finessed by keeping the state information for several random
+ streams in vectors, and then those values can be swapped in place of 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|.Random.seed|
+\end_layout
+
+\end_inset
+
+ when we intend to draw from a particular stream.
+ The function 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|useStream()|
+\end_layout
+
+\end_inset
+
+ allows one to select among the random number streams.
  
 \end_layout
 
 \begin_layout Standard
-The user's function should accept the run number and the object of type
- portableSeeds as arguments.
- For example,
+A simulation program will generally have a function that orchestrates one
+ 
+\begin_inset Quotes eld
+\end_inset
+
+run
+\begin_inset Quotes erd
+\end_inset
+
+ of calculations.
+ If that function is called, for example, 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|conductOneRun()|
+\end_layout
+
+\end_inset
+
+, then the first piece of business in that function will be to re-set the
+ set of random generator states.
+ For example, given a run number and a collection of seeds, the work of
+ initializing the simulation can be passed along to 
+\begin_inset ERT
+status open
+
+\begin_layout Plain Layout
+
+
+\backslash
+Rcode|initPortableStreams()|
+\end_layout
+
+\end_inset
+
+.
 \end_layout
 
 \begin_layout Standard
@@ -662,7 +851,7 @@ status open
 
 \begin_layout Plain Layout
 
-myFunction <- function(run, streamSet, a, b, c, d){
+conductOneRun <- function(run, streamSet, a, b, c, d){
 \end_layout
 
 \begin_layout Plain Layout
@@ -1406,10 +1595,6 @@ Answer: That does allow replication, but it does not assure that each run
 \begin_layout Standard
 Nevertheless, it is a method that is widely used and recommended by some
  visible HOWTO guides.
-\end_layout
-
-\begin_layout Standard
-
 \end_layout
 
 \begin_layout Standard
