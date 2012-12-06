@@ -1,6 +1,6 @@
 \name{mvrnorm}
 \alias{mvrnorm}
-\title{Simulate from a Multivariate Normal Distribution}
+\title{Replication Fix for draws from a Multivariate Normal Distribution (MASS style)}
 \usage{
   mvrnorm(n = 1, mu, Sigma, tol = 1e-06, empirical = FALSE,
     EISPACK = FALSE)
@@ -31,34 +31,33 @@
 \description{
   This is the \code{\link[MASS]{mvrnorm}} function from the
   MASS package (Venables and Ripley, 2002), with one small
-  modification to facilitate replication of random samples
-  of various sizes. The aim is to make replicable the first
-  k rows of data generated from mvrnorm, where k < n. This
-  assumes, of course, that the user runs \code{set.seed} to
-  re-initialize the random generator before each usage of
-  mvrnorm.
+  modification to facilitate replication of random samples.
+  For replication purposes, it is necessary to make sure
+  that, after the seed is reset, the first rows of
+  generated data are identical no matter what value is
+  chosen for n.  That is to say, if one generates k
+  observations, and then re-sets the seed, and then
+  generates n > k observations, then the first k rows
+  should be identical. \code{MASS::mvrnorm} does not meet
+  that requirement, but \code{MASS::mvrnorm} does.
 }
 \details{
-  Users who draw a sample size of n=(N+k) may hope that
-  mvrnorm will produce the exact same observations for the
-  first 1:N rows in the output data when k is adjusted. The
-  version of \code{mvrnorm} provided with MASS does not do
-  so.  After re-setting the seed, this function assures
-  that the rows of the smaller set will match the larger
-  sample up to row N. Draws after N will differ, of course,
-  but in a replicable way, so that one could then draw a
-  sample of size (N + k + k2) and the first (N + k) values
-  will match the previous sample. Please run the example
-  for an illustration.
+  To assure replication, only a very small change is made.
+  The code in \code{MASS::mvrnorm} draws a random sample
+  and fills a matrix by column, and that matrix is then
+  decomposed.  The change implemented here fills that
+  matrix by row and the problem is eliminated.
 
-  Why is this important?  We are trying to isolate the
-  sources of change between samples. \code{mvrnorm} gives
-  the exact same values for column one up to row (n) when a
-  sample size changes, but it gives different results for
-  the other columns. This causes confusion among
-  researchers, some of whom exect the rows should be the
-  same up to a point, while others expect that each column
-  should be completely replaced each time.
+  Some peculiarities are noticed when the covariance matrix
+  changes from a diagonal matrix to a more general
+  symmetric matrix (non-zero elements off-diagonal).  When
+  the covariance is strictly diagonal, then just one column
+  of the simulated multivariate normal data will be
+  replicated, but the others are not. This has very
+  troublesome implications for simulations that draw
+  samples of various sizes and then base calculations on
+  the separate simulated columns (i.e., some columns are
+  identical, others are completely uncorrelated).
 }
 \examples{
 library(portableParallelSeeds)
@@ -71,16 +70,40 @@ X1 <- MASS::mvrnorm(n=5, mu = c(0,0,0), Sigma = diag(3))
 set.seed(12345)
 X2 <- MASS::mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
 ## The first 5 rows in X0, X1, and X2 are not the same
-identical(X0[1:5, ], X1[1:5, ])
-identical(X1[1:5, ], X2[1:5, ])
+X0
+X1
+X2
 set.seed(12345)
 Y0 <- mvrnorm(n=10, mu = c(0,0,0), Sigma = diag(3))
 set.seed(12345)
 Y1 <- mvrnorm(n=5, mu = c(0,0,0), Sigma = diag(3))
 set.seed(12345)
 Y2 <- mvrnorm(n=15, mu = c(0,0,0), Sigma = diag(3))
+# note results are the same in the first 5 rows:
+Y0
+Y1
+Y2
 identical(Y0[1:5, ], Y1[1:5, ])
 identical(Y1[1:5, ], Y2[1:5, ])
+
+myR <- lazyCor(X = 0.3, d = 5)
+mySD <- c(0.5, 0.5, 0.5, 1.5, 1.5)
+myCov <- lazyCov(Rho = myR, Sd = mySD)
+
+set.seed(12345)
+X0 <- MASS::mvrnorm(n=10, mu = rep(0, 5), Sigma = myCov)
+## create a smaller data set, starting at same position
+set.seed(12345)
+X1 <- MASS::mvrnorm(n=5, mu = rep(0, 5), Sigma = myCov)
+X0
+X1
+##' set.seed(12345)
+Y0 <- portableParallelSeeds::mvrnorm(n=10, mu = rep(0, 5), Sigma = myCov)
+## create a smaller data set, starting at same position
+set.seed(12345)
+Y1 <- portableParallelSeeds::mvrnorm(n=5, mu = rep(0, 5), Sigma = myCov)
+Y0
+Y1
 }
 \author{
   Ripley, B.D. with revision by Paul E. Johnson
@@ -89,5 +112,11 @@ identical(Y1[1:5, ], Y2[1:5, ])
   Venables, W. N. & Ripley, B. D. (2002) Modern Applied
   Statistics with S. Fourth Edition. Springer, New York.
   ISBN 0-387-95457-0
+}
+\seealso{
+  For an alternative multivariate normal generator
+  function, see the function
+  \code{\link[mvtnorm]{rmvnorm}}, in the package
+  \code{mvtnorm}.
 }
 

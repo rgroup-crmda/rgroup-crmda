@@ -1,6 +1,6 @@
 ## Paul E. Johnson CRMDA <pauljohn@ku.edu>
 ## Portable Parallel Seeds Project.
-## 2012-10-24
+## 2012-11-30
 
 
 ##' Selects among available random streams.
@@ -83,6 +83,58 @@ getCurrentStream <- function(){
     curStream
 }
 
+
+
+##' Return one or all state vectors, either from original position or current position.
+##'
+##' The environment variable currentStates is a list of states of
+##' random generators. In most use cases, users will not need to use
+##' this function because the details are handled by useStream.  Users
+##' may need to explicitly access the stream states if they want
+##' to extract that information and then pass it along to other
+##' functions that do not use the built-in R random generator framework.
+##'
+##' @export getState
+##' @return Integer index value of currently selected stream
+##' @author Paul E. Johnson <pauljohn@@ku.edu>
+##' @param stream Optional. Selects a particular stream's state.  If no value is supplied, then the list including all of the stream states is supplied.
+##' @param origin If FALSE (default), return the current, updated state of one or all random stream. If TRUE, return the initial stream states.
+##' @examples
+##' mySeeds <- seedCreator(500, 5, file="mySeeds.rds", seed = 123123)
+##' initPortableStreams(mySeeds, run = 17)
+##  runif(2)
+##' getCurrentStream()
+##' getState(origin=TRUE)
+##' getState(stream = 2)
+##' getState()
+##' useStream(2)
+##' runif(2)
+getState <- function(stream, origin = FALSE){
+    if (exists(".Random.seed", envir = .GlobalEnv, inherits = FALSE))
+        get(".Random.seed", envir = .GlobalEnv, inherits = FALSE)
+    else stop("in useStream, .Random.seed was NULL")
+    ## get local copies of currentStream, currentStates
+    if (origin == TRUE){
+        if (exists("startStates", envir = .GlobalEnv, inherits = FALSE))
+            states <- get("startStates", envir = .GlobalEnv, inherits = FALSE)
+        else stop("startStates is not found in the environment.  Did you damage it?")
+        if (missing(stream)) return(states)
+        else if (length(states) >= stream) return (states[[stream]])
+        else stop("In initPortableSeeds, function getState: requested stream does not exist")
+    } else {
+        if (exists("currentStates", envir = .GlobalEnv, inherits = FALSE))
+            states <- get("currentStates", envir = .GlobalEnv, inherits = FALSE)
+        else stop("currentStates is not found in the environment.  Did you damage it?")
+
+        if (missing(stream)) return(states)
+        else if (length(states) >= stream) return (states[[stream]])
+        else stop("In initPortableSeeds, function getState: requested stream does not exist")
+    }
+    stop("Reached the end of getState without returning, some error occurred.")
+}
+
+
+
 ##' Brings saved random streams back to life. Reads a portable
 ##' parallel seeds object (or file) and sets the seed collection in
 ##' the global environment.
@@ -114,12 +166,12 @@ getCurrentStream <- function(){
 ##' random generator).
 ##' @export initPortableStreams
 ##' @title initPortableStreams
-##' @param projSeeds Either an object of class portableSeeds (created
+##' @param projSeeds Required. Either an object of class portableSeeds (created
 ##' by \code{seedCreator}) or a text string giving the name of an R
 ##' saved file of the appropriate format (created by the seedCreator function).
 ##' @param run Integer indicating which element from the portable seed collection is to be selected
-##' @param verbose True or False: print out the state of the current generator
-##' @return nothing is returned. This function is used for the side effect of seetting three objects in the global environment, the startStates (list), currentStates (list), and currentStream (an integer).
+##' @param verbose Optional. Print out the state of the current generator. Default = FALSE.
+##' @return nothing is returned. This function is used for the side effect of setting three objects in the global environment, the startStates (list), currentStates (list), and currentStream (an integer).
 ##' @author Paul E. Johnson <pauljohn@@ku.edu>
 ##' @seealso \code{seedCreator} to generate the input file for this function and \code{useStream} to change from one stream to another.
 ##' @example inst/examples/pps-ex.R
@@ -148,8 +200,50 @@ initPortableStreams <- function(projSeeds, run, verbose = FALSE){
   if (verbose){
     print(paste("initPortableStreams, Run = ", run))
     print(.Random.seed)
-    print(paste("CurrentStream CurrentStream CurrentStream =", get("currentStream", envir = .GlobalEnv, inherits = FALSE)))
+    print(paste("CurrentStream =", get("currentStream", envir = .GlobalEnv, inherits = FALSE)))
     print("All Current States")
     print(paste(get("currentStates", envir = .GlobalEnv, inherits = FALSE)))
+  }
+}
+
+
+
+##' Sets a collection of initial states for separate random generator streams into the global environment.
+##'
+##' The main argument is the collection of seeds that is in the proper format. It should be (one element from a "portableSeeds" object). The function sets the global environment variables .RandomSeed, currentStream, startStates, and currentStates.
+##'
+##' As originally planned in this package, the suggested method of setting the seeds is the initPortableStreams function. That function receives a run number and a warehouse of seeds created by seedCreator. \code{initPortableStreams} will select the initializing states for the streams from the seed warehouse.
+##'
+##' Some specific use cases, particuarly the replication of individual runs, may be faciliated by this function, which offers a way to set one seed collection into place.
+##'
+##' @export setSeedCollection
+##' @param runSeeds Required. A list including seeds (vectors of initializing values) for the L'Ecuyer-CMRG random generator
+##' @param currentStream Optional. Integer indicating which of the streams is to be used first. Default = 1.
+##' @param verbose Optional. Default = FALSE.
+##' @return nothing is returned. This function is used for the side effect of setting three objects in the global environment, the startStates (list), currentStates (list), and currentStream (an integer).
+##' @author Paul E. Johnson <pauljohn@@ku.edu>
+##' @seealso \code{initPortableStreams} performs the same service, but it does the additional work of finding the correct element for a given run within a seed collection; \code{seedCreator} to generate the a seed collection; \code{useStream} to change from one stream to another.
+##' @example inst/examples/pps-ex-2.R
+setSeedCollection <- function(runSeeds, currentStream = 1L, verbose = FALSE){
+    require(parallel)
+    RNGkind("L'Ecuyer-CMRG")
+
+    if (missing(runSeeds)) {
+        stop("setStreamCollection requires a seed object in order to initialize the random streams")
+    }
+
+    ##TODO: find out what checks on the runSeeds elements are necessary.
+    ## Should check each first element is 407? Make sure length of each is 7?
+    ##
+    assign("currentStream",  as.integer(currentStream), envir = .GlobalEnv)
+    assign("startStates", runSeeds, envir = .GlobalEnv)
+    assign("currentStates", runSeeds, envir = .GlobalEnv)
+    assign(".Random.seed", runSeeds[[1L]],  envir = .GlobalEnv)
+    if (verbose){
+        print(paste("setStreamCollection"))
+        print(.Random.seed)
+        print(paste("CurrentStream =", get("currentStream", envir = .GlobalEnv, inherits = FALSE)))
+        print("All Current States")
+        print(paste(get("currentStates", envir = .GlobalEnv, inherits = FALSE)))
   }
 }

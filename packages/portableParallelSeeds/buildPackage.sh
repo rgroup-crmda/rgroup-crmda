@@ -12,7 +12,9 @@ rm -rf ${PACKAGE}.gitex
 
 mkdir ${PACKAGE}.gitex
 cd ${PACKAGE}
-git archive master | tar -x -C "../${PACKAGE}.gitex"
+##git archive master | tar -x -C "../${PACKAGE}.gitex"
+## copies UNCOMMITTED but TRACKED files.
+git ls-files . | tar cT - | tar -x -C "../${PACKAGE}.gitex"
 cd ..
 cd ${PACKAGE}.gitex/vignettes
 
@@ -63,3 +65,6 @@ rm -rf ${PACKAGE}.Rcheck
 fi
 
 echo "Consider scp ${PACKAGE}_${VERSION}.tar.gz hpc.quant.ku.edu:/tools/kran/src/contrib"
+echo "Consider sending to win builder"
+echo "Consider uploading windows version"
+echo  "scp portableParallelSeeds_0.6.0.zip hpc.quant.ku.edu:/tools/kran/bin/windows/contrib/2.15"

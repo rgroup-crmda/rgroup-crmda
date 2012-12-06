@@ -5,20 +5,21 @@
   initPortableStreams(projSeeds, run, verbose = FALSE)
 }
 \arguments{
-  \item{projSeeds}{Either an object of class portableSeeds
-  (created by \code{seedCreator}) or a text string giving
-  the name of an R saved file of the appropriate format
-  (created by the seedCreator function).}
+  \item{projSeeds}{Required. Either an object of class
+  portableSeeds (created by \code{seedCreator}) or a text
+  string giving the name of an R saved file of the
+  appropriate format (created by the seedCreator
+  function).}
 
   \item{run}{Integer indicating which element from the
   portable seed collection is to be selected}
 
-  \item{verbose}{True or False: print out the state of the
-  current generator}
+  \item{verbose}{Optional. Print out the state of the
+  current generator. Default = FALSE.}
 }
 \value{
   nothing is returned. This function is used for the side
-  effect of seetting three objects in the global
+  effect of setting three objects in the global
   environment, the startStates (list), currentStates
   (list), and currentStream (an integer).
 }
